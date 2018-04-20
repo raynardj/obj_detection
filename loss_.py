@@ -22,7 +22,7 @@ class t2b(nn.Module):
         return x
     
 class yloss_basic(nn.Module):
-    def __init__(self,lbd_coord=5,lbd_noobj=.1,lbd_cls=1,testing=False):
+    def __init__(self,lbd_coord,lbd_noobj,lbd_cls,testing):
         """
         lbd_coord: lambda_coordinate
         lbd_noobj: lambda_no_object
@@ -68,7 +68,7 @@ class yolo3_loss_on_b(yloss_basic):
         lbd_coord: lambda_coordinate
         lbd_noobj: lambda_no_object
         """
-        super(yolo3_loss_on_b,self).__init__()
+        super(yolo3_loss_on_b,self).__init__(lbd_coord,lbd_noobj,lbd_cls,testing)
     
 #     def forward(self,y_pred,y_true,lbl_mask):
 #         y_pred = self.t2b(y_pred.float())
