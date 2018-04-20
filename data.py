@@ -1,8 +1,4 @@
-from torch.utils.data import DataLoader,dataset
-import torch
-from torch import nn
-from torch.autograd import Variable
-from torch.nn import functional as F
+from torch.utils.data import dataset
 
 from constant import *
 import numpy as np
@@ -11,11 +7,12 @@ from PIL import Image
 from torchvision import transforms
 
 class odData(dataset.Dataset):
-    def __init__(self,*args,**kwargs):
+    def __init__(self,testing=False,*args,**kwargs):
         """Object detection data generatorcd """
         super(odData,self).__init__()
         for k,v in kwargs.items():
             setattr(self,k,v)
+        self.testing=testing
         self.anc = np.tile(ANC_ARR[np.newaxis,np.newaxis,:,:],[FEAT_W,FEAT_H,1,1])
         
     def __len__(self):
@@ -24,13 +21,15 @@ class odData(dataset.Dataset):
     def __getitem__(self,idx):
         img=Image.open(self.urllist[idx]).convert("RGB")
 
-        if self.transform:
-            sample = self.transform(img)
+        sample = self.transform(img)
         
         original = self.trans_origin(img)
         
-        true_lbl,mask,vec_loc,t_xy,t_wh = self.true_label(self.true_adj_expand(self.true_adj[idx]),self.vec_loc[idx])
-        
+        true_lbl,mask,vec_loc,t_xy,t_wh = self.true_label(self.true_adj_expand(self.true_adj[idx]),
+                                                          self.vec_loc[idx])
+        if self.testing:
+            slicing = vec_loc[...,0],vec_loc[...,1],vec_loc[...,2]
+            print("b",true_lbl[vec_loc[...,0],vec_loc[...,1],vec_loc[...,2],:5],"\ttxy",t_xy[slicing],"\ttwh",t_wh[slicing])
         return sample,true_lbl,original,mask,vec_loc,t_xy,t_wh
     
     def true_label(self,true_adj,vec_loc):
@@ -53,9 +52,9 @@ class odData(dataset.Dataset):
         return x
     
     def b2t_wh(self,x):
-        x[...,:2] = np.clip(x[...,2:4],1e-2,12.999)
-        x[...,:2] = x[...,:2]/self.anc
-        x[...,:2] = np.log(x[...,:2])
+        x[...,2:4] = np.clip(x[...,2:4],1e-2,12.999)
+        x[...,2:4] = x[...,2:4]/self.anc
+        x[...,2:4] = np.log(x[...,2:4])
         return x
     
     def true_adj_expand(self,true_adj):

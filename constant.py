@@ -1,11 +1,16 @@
 import numpy as np
 import torch
 
-HOME = "/home/zhangxiaochen/"
-DATA = "/terminus/coco/"
-IMG = DATA+"train2017/"
-ANN = DATA+"annotations/instances_train2017.json"
+# HOME = "/home/zhangxiaochen/"
+# DATA = "/terminus/coco/"
+# IMG = DATA+"train2017/"
+# ANN = DATA+"annotations/instances_train2017.json"
 
+
+HOME = "/Users/zhangxiaochen/"
+DATA = "/data/coco/"
+IMG = DATA+"val2017/"
+ANN = DATA+"annotations/instances_val2017.json"
 # --------------------------------------------------
 
 SIZE = 416 # 13 * 32
