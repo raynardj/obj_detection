@@ -62,6 +62,64 @@ class yloss_basic(nn.Module):
     
         return mask.detach(),mask2.detach(),ioumap.detach()
     
+class yolo3_loss_on_t(yloss_basic):
+    def __init__(self,lbd_coord=5,lbd_noobj=.1,lbd_cls=1,testing=False):
+        """
+        lbd_coord: lambda_coordinate
+        lbd_noobj: lambda_no_object
+        """
+        super(yolo3_loss_on_t,self).__init__(lbd_coord,lbd_noobj,lbd_cls,testing)
+    
+    def forward(self,y_pred,y_true,lbl_mask,vec_loc,t_xy,t_wh):
+        bs = y_true.size()[0]
+        y_pred_b = self.t2b(y_pred.float())
+        y_true_b = y_true.float()
+        lbl_mask = lbl_mask.float()
+        
+        mask,mask2,ioumap = self.loss_mask(y_true_b,y_pred_b,lbl_mask)
+        
+        y_true = y_true.float()
+        y_pred = y_pred.float()
+        
+#         y_true = (y_true * mask).float()
+        y_pred = (y_pred * mask).float()
+    
+        y_true_noobj = (y_true * mask2).float()
+        y_pred_noobj = (y_pred * mask2).float()
+        
+        y_pred_xy = y_pred[...,:2]
+        y_true_xy = t_xy.float()
+        
+        y_pred_wh = y_pred[...,2:4]
+        y_true_wh = t_wh.float()
+        
+        y_pred_conf = y_pred[...,4]
+#         y_true_conf = ioumap * y_true[...,4]
+        y_true_conf = y_true[...,4]
+        
+        y_pred_cls = y_pred[...,5:]
+        y_true_cls = y_true[...,5:]
+        
+        if self.testing:
+            idxw,idxh,idxb = vec_loc[0,...,0].data[0],vec_loc[0,...,1].data[0],vec_loc[0,...,2].data[0]
+            print("bb",y_pred_wh[0,idxw,idxh,idxb].view(-1).data.cpu().numpy(),
+              "\t",y_true_wh[0,idxw,idxh,idxb].view(-1).data.cpu().numpy())
+            print("conf",y_pred_conf[0,idxw,idxh,idxb].data[0],
+                  "\t",y_true_conf[0,idxw,idxh,idxb].data[0])
+            print("cls",torch.max(y_pred_cls[0,idxw,idxh,idxb])[0].data[0],
+                  "\t",torch.max(y_true_cls[0,idxw,idxh,idxb])[0].data[0])
+        
+        loss_noobj = (torch.pow(y_pred_noobj[...,4]-y_true_noobj[...,4],2).sum() * self.lbd_noobj)/bs
+        
+        loss_xy = (torch.pow(y_pred_xy-y_true_xy,2).sum() * self.lbd_coord)/bs
+        loss_wh = (torch.pow(y_pred_wh-y_true_wh,2).sum() * self.lbd_coord)/bs
+        loss_obj = (torch.pow(y_pred_conf-y_true_conf,2).sum())/bs
+        loss_cls = (torch.pow(y_pred_cls-y_true_cls,2).sum() * self.lbd_cls)/bs
+        loss = loss_xy + loss_wh + loss_obj + loss_noobj + loss_cls
+        
+        return loss,loss_xy,loss_wh,loss_obj,loss_noobj,loss_cls
+
+    
 class yolo3_loss_on_b(yloss_basic):
     def __init__(self,lbd_coord=5,lbd_noobj=.1,lbd_cls=1,testing=False):
         """
@@ -98,7 +156,7 @@ class yolo3_loss_on_b(yloss_basic):
         
 #         return loss,loss_bb,loss_obj,loss_noobj,loss_cls
     
-    def forward(self,y_pred,y_true,lbl_mask,vec_loc):
+    def forward(self,y_pred,y_true,lbl_mask,vec_loc,t_xy,t_wh):
         bs = y_true.size()[0]
         y_pred = self.t2b(y_pred.float())
         y_true = y_true.float()
@@ -140,7 +198,7 @@ class yolo3_loss_on_b(yloss_basic):
         loss_noobj = (torch.pow(y_pred_noobj[...,4]-y_true_noobj[...,4],2).sum() * self.lbd_noobj)/bs
         
         loss_xy = (torch.pow(y_pred_xy-y_true_xy,2).sum() * self.lbd_coord)/bs
-        loss_wh = (torch.pow(y_pred_xy-y_true_wh,2).sum() * self.lbd_coord)/bs
+        loss_wh = (torch.pow(y_pred_wh-y_true_wh,2).sum() * self.lbd_coord)/bs
         loss_obj = (torch.pow(y_pred_conf-y_true_conf,2).sum())/bs
         loss_cls = (torch.pow(y_pred_cls-y_true_cls,2).sum() * self.lbd_cls)/bs
         loss = loss_xy + loss_wh + loss_obj + loss_noobj + loss_cls

@@ -51,6 +51,7 @@ class DenseNet(nn.Module):
     def forward(self, x):
         features = self.features(x)
         return features
+    
 def dn121_conv(pkl_path):
     r"""Densenet-121 model from
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
