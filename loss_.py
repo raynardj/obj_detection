@@ -63,7 +63,7 @@ class yloss_basic(nn.Module):
         return mask.detach(),mask2.detach(),ioumap.detach()
     
 class yolo3_loss_on_t(yloss_basic):
-    def __init__(self,lbd_coord=5,lbd_noobj=.1,lbd_cls=1,testing=False):
+    def __init__(self,lbd_coord=5,lbd_noobj=.5,lbd_cls=1,testing=False):
         """
         lbd_coord: lambda_coordinate
         lbd_noobj: lambda_no_object
@@ -80,6 +80,8 @@ class yolo3_loss_on_t(yloss_basic):
         
         y_true = y_true.float()
         y_pred = y_pred.float()
+        
+        y_pred[...,4:] = F.sigmoid(y_pred[...,4:])
         
 #         y_true = (y_true * mask).float()
         y_pred = (y_pred * mask).float()
@@ -111,10 +113,10 @@ class yolo3_loss_on_t(yloss_basic):
         
         loss_noobj = (torch.pow(y_pred_noobj[...,4]-y_true_noobj[...,4],2).sum() * self.lbd_noobj)/bs
         
-        loss_xy = (torch.pow(y_pred_xy-y_true_xy,2).sum() * self.lbd_coord)/bs
-        loss_wh = (torch.pow(y_pred_wh-y_true_wh,2).sum() * self.lbd_coord)/bs
+        loss_xy = (torch.pow(y_pred_xy-y_true_xy,2).sum() * self.lbd_coord)/(bs*2)
+        loss_wh = (torch.pow(y_pred_wh-y_true_wh,2).sum() * self.lbd_coord)/(bs*2)
         loss_obj = (torch.pow(y_pred_conf-y_true_conf,2).sum())/bs
-        loss_cls = (torch.pow(y_pred_cls-y_true_cls,2).sum() * self.lbd_cls)/bs
+        loss_cls = F.binary_cross_entropy(y_pred_cls,y_true_cls)
         loss = loss_xy + loss_wh + loss_obj + loss_noobj + loss_cls
         
         return loss,loss_xy,loss_wh,loss_obj,loss_noobj,loss_cls
@@ -127,34 +129,6 @@ class yolo3_loss_on_b(yloss_basic):
         lbd_noobj: lambda_no_object
         """
         super(yolo3_loss_on_b,self).__init__(lbd_coord,lbd_noobj,lbd_cls,testing)
-    
-#     def forward(self,y_pred,y_true,lbl_mask):
-#         y_pred = self.t2b(y_pred.float())
-#         y_true = y_true.float()
-#         lbl_mask = lbl_mask.float()
-        
-#         mask,mask2,ioumap = self.loss_mask(y_true,y_pred,lbl_mask)
-        
-#         y_true = y_true.float()
-#         y_pred = y_pred.float()
-        
-#         y_true_noobj = (y_true * mask2).float()
-#         y_pred_noobj = (y_pred * mask2).float()
-        
-#         y_pred_conf = y_pred[...,4]
-#         y_true_conf = ioumap * y_true[...,4]
-        
-#         loss_noobj = F.binary_cross_entropy(y_pred_noobj[...,4],y_true_noobj[...,4]) * self.lbd_noobj
-        
-#         y_true = (y_true * mask).float()
-#         y_pred = (y_pred * mask).float()
-
-#         loss_bb = F.mse_loss(y_pred[...,:4],y_true[...,:4]) * self.lbd_coord
-#         loss_obj = F.binary_cross_entropy(y_pred_conf,y_true_conf) 
-#         loss_cls = F.binary_cross_entropy(y_pred[...,5:],y_true[...,5:]) * self.lbd_cls
-#         loss = loss_bb + loss_obj + loss_noobj + loss_cls
-        
-#         return loss,loss_bb,loss_obj,loss_noobj,loss_cls
     
     def forward(self,y_pred,y_true,lbl_mask,vec_loc,t_xy,t_wh):
         bs = y_true.size()[0]

@@ -55,7 +55,7 @@ class odData(dataset.Dataset):
         x[...,2:4] = np.clip(x[...,2:4],1e-2,12.999)
         x[...,2:4] = x[...,2:4]/self.anc
         x[...,2:4] = np.log(x[...,2:4])
-        return x
+        return x    
     
     def true_adj_expand(self,true_adj):
         return  np.tile(true_adj[np.newaxis,np.newaxis,np.newaxis,:],[FEAT_W,FEAT_H,BOX,1])

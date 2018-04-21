@@ -1,16 +1,30 @@
 import numpy as np
+import pandas as pd
 import torch
+import json
+
+
+# Terminus
 
 # HOME = "/home/zhangxiaochen/"
 # DATA = "/terminus/coco/"
 # IMG = DATA+"train2017/"
 # ANN = DATA+"annotations/instances_train2017.json"
 
+# Macbook
 
-HOME = "/Users/zhangxiaochen/"
-DATA = "/data/coco/"
+# HOME = "/Users/zhangxiaochen/"
+# DATA = "/data/coco/"
+# IMG = DATA+"val2017/"
+# ANN = DATA+"annotations/instances_val2017.json"
+
+# Jupiter AWS
+
+HOME = "/home/ubuntu/"
+DATA = "/data/"
 IMG = DATA+"val2017/"
 ANN = DATA+"annotations/instances_val2017.json"
+
 # --------------------------------------------------
 
 SIZE = 416 # 13 * 32
@@ -21,7 +35,8 @@ WIDTH = 416
 SCALE =32
 
 BOX = 5
-VEC_LEN = 85
+CLS_LEN = 80
+VEC_LEN = BOX + CLS_LEN
 
 FEAT_W = int(HEIGHT/SCALE)
 FEAT_H = int(WIDTH/SCALE)
@@ -45,3 +60,15 @@ GRID_MAP=np.concatenate([
     np.tile(np.arange(FEAT_W).reshape(1,-1,1,1,1),[1,1,FEAT_H,5,1]),
     np.tile(np.arange(FEAT_H).reshape(1,1,-1,1,1),[1,FEAT_W,1,5,1]),]
     ,axis=-1)
+
+
+jsfile = open(ANN).read()
+
+jsdict = json.loads(jsfile)
+
+jsdict.keys()
+
+cat_df = pd.DataFrame(jsdict["categories"])
+idx2name = dict(zip(cat_df["id"],cat_df["name"]))
+id2idx = dict(enumerate(cat_df["id"]))
+idx2id = dict((v,k) for k,v in enumerate(cat_df["id"]))
