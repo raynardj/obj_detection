@@ -104,8 +104,11 @@ class yolo3_loss_on_t(yloss_basic):
         
         if self.testing:
             idxw,idxh,idxb = vec_loc[0,...,0].data[0],vec_loc[0,...,1].data[0],vec_loc[0,...,2].data[0]
-            print("bb",y_pred_wh[0,idxw,idxh,idxb].view(-1).data.cpu().numpy(),
-              "\t",y_true_wh[0,idxw,idxh,idxb].view(-1).data.cpu().numpy())
+            print("bb",y_pred_xy[0,idxw,idxh,idxb].view(-1).data.cpu().numpy(),
+                  "\t", y_pred_wh[0, idxw, idxh, idxb].view(-1).data.cpu().numpy(),
+                  "\t", y_true_xy[0, idxw, idxh, idxb].view(-1).data.cpu().numpy(),
+              "\t",y_true_wh[0,idxw,idxh,idxb].view(-1).data.cpu().numpy(),
+                  )
             print("conf",y_pred_conf[0,idxw,idxh,idxb].data[0],
                   "\t",y_true_conf[0,idxw,idxh,idxb].data[0])
             print("cls",torch.max(y_pred_cls[0,idxw,idxh,idxb])[0].data[0],
