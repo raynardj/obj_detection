@@ -111,11 +111,12 @@ class yolo3_loss_on_t(yloss_basic):
             print("cls",torch.max(y_pred_cls[0,idxw,idxh,idxb])[0].data[0],
                   "\t",torch.max(y_true_cls[0,idxw,idxh,idxb])[0].data[0])
         
-        loss_noobj = (torch.pow(y_pred_noobj[...,4]-y_true_noobj[...,4],2).sum() * self.lbd_noobj)/bs
-        
-        loss_xy = (torch.pow(y_pred_xy-y_true_xy,2).sum() * self.lbd_coord)/(bs*2)
-        loss_wh = (torch.pow(y_pred_wh-y_true_wh,2).sum() * self.lbd_coord)/(bs*2)
-        loss_obj = (torch.pow(y_pred_conf-y_true_conf,2).sum())/bs
+        loss_noobj = F.mse_loss(y_pred_noobj[...,4],y_true_noobj[...,4]) * self.lbd_noobj
+        loss_obj = F.mse_loss(y_pred_conf, y_true_conf)
+
+        loss_xy = F.mse_loss(y_pred_xy,y_true_xy) * self.lbd_coord
+        loss_wh = F.mse_loss(y_pred_wh,y_true_wh) * self.lbd_coord
+
         loss_cls = F.binary_cross_entropy(y_pred_cls,y_true_cls)
         loss = loss_xy + loss_wh + loss_obj + loss_noobj + loss_cls
         
