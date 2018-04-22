@@ -88,8 +88,8 @@ class yolo3_loss_on_t(yloss_basic):
 #         y_true = (y_true * mask).float()
         y_pred = (y_pred * mask).float()
     
-        y_true_noobj = (y_true * mask2).float()
-        y_pred_noobj = (y_pred * mask2).float()
+        y_true_noobj = (y_true * mask2).float()[...,4]
+        y_pred_noobj = (y_pred * mask2).float()[...,4]
         
         y_pred_xy = y_pred[...,:2]
         y_true_xy = t_xy.float()
@@ -97,9 +97,10 @@ class yolo3_loss_on_t(yloss_basic):
         y_pred_wh = y_pred[...,2:4]
         y_true_wh = t_wh.float()
         
+        # y_pred_conf = ioumap * y_pred[...,4]
         y_pred_conf = y_pred[...,4]
-#         y_true_conf = ioumap * y_true[...,4]
-        y_true_conf = y_true[...,4]
+        y_true_conf = ioumap * y_true[...,4]
+        # y_true_conf = y_true[...,4]
         
         y_pred_cls = y_pred[...,5:]
         y_true_cls = y_true[...,5:]
@@ -116,7 +117,7 @@ class yolo3_loss_on_t(yloss_basic):
             print("cls",torch.max(y_pred_cls[0,idxw,idxh,idxb])[0].data[0],
                   "\t",torch.max(y_true_cls[0,idxw,idxh,idxb])[0].data[0])
         
-        loss_noobj = F.mse_loss(y_pred_noobj[...,4],y_true_noobj[...,4]) * self.lbd_noobj
+        loss_noobj = F.mse_loss(y_pred_noobj,y_true_noobj) * self.lbd_noobj
         loss_obj = F.mse_loss(y_pred_conf, y_true_conf)
 
         loss_xy = F.mse_loss(y_pred_xy,y_true_xy) * self.lbd_coord
