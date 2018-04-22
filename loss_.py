@@ -16,9 +16,11 @@ class t2b(nn.Module):
     def forward(self,x,pred=False):
         bs=x.size()[0]
         x=x.float()
-        x[...,:2]=F.sigmoid(x[...,:2].clone())+self.grid.repeat(bs,1,1,1,1)
-        x[...,2:4]=torch.exp(x[...,2:4].clone())*self.anc.repeat(bs,FEAT_W,FEAT_H,1,1)
-        x[...,4:]=F.sigmoid(x[...,4:])
+        xy=F.sigmoid(x[...,:2])+self.grid.repeat(bs,1,1,1,1)
+        wh=torch.exp(x[...,2:4])*self.anc.repeat(bs,FEAT_W,FEAT_H,1,1)
+        others=F.sigmoid(x[...,4:])
+        
+        x = torch.cat([xy,wh,others],dim=-1)
         return x
     
 class yloss_basic(nn.Module):
@@ -120,7 +122,7 @@ class yolo3_loss_on_t(yloss_basic):
         loss_xy = F.mse_loss(y_pred_xy,y_true_xy) * self.lbd_coord
         loss_wh = F.mse_loss(y_pred_wh,y_true_wh) * self.lbd_coord
 
-        loss_cls = F.binary_cross_entropy(y_pred_cls,y_true_cls)
+        loss_cls = F.binary_cross_entropy(y_pred_cls,y_true_cls)* self.lbd_cls
         loss = loss_xy + loss_wh + loss_obj + loss_noobj + loss_cls
         
         return loss,loss_xy,loss_wh,loss_obj,loss_noobj,loss_cls
@@ -155,6 +157,8 @@ class yolo3_loss_on_b(yloss_basic):
         
         y_pred_wh=torch.sqrt(F.relu(y_pred[...,2:4]))
         y_true_wh=torch.sqrt(y_true[...,2:4])
+        # y_pred_wh=y_pred[...,2:4]
+        # y_true_wh=y_true[...,2:4]
         
         y_pred_conf = y_pred[...,4]
 #         y_true_conf = ioumap * y_true[...,4]
@@ -163,22 +167,22 @@ class yolo3_loss_on_b(yloss_basic):
         y_pred_cls = y_pred[...,5:]
         y_true_cls = y_true[...,5:]
         
-        idxw,idxh,idxb = vec_loc[0,...,0].data[0],vec_loc[0,...,1].data[0],vec_loc[0,...,2].data[0]
-        
         if self.testing:
-            print("bb",y_pred_wh[0,idxw,idxh,idxb].view(-1).data.cpu().numpy(),
-              "\t",y_true_wh[0,idxw,idxh,idxb].view(-1).data.cpu().numpy())
+            idxw,idxh,idxb = vec_loc[0,...,0].data[0],vec_loc[0,...,1].data[0],vec_loc[0,...,2].data[0]
+            print("bb",y_pred[0,idxw,idxh,idxb,:4].view(-1).data.cpu().numpy(),
+              "\t",y_true[0,idxw,idxh,idxb,:4].view(-1).data.cpu().numpy())
             print("conf",y_pred_conf[0,idxw,idxh,idxb].data[0],
                   "\t",y_true_conf[0,idxw,idxh,idxb].data[0])
             print("cls",torch.max(y_pred_cls[0,idxw,idxh,idxb])[0].data[0],
                   "\t",torch.max(y_true_cls[0,idxw,idxh,idxb])[0].data[0])
         
-        loss_noobj = (torch.pow(y_pred_noobj[...,4]-y_true_noobj[...,4],2).sum() * self.lbd_noobj)/bs
+        loss_noobj = F.mse_loss(y_pred_noobj[...,4],y_true_noobj[...,4]) * self.lbd_noobj
+        loss_obj = F.mse_loss(y_pred_conf,y_true_conf)
         
-        loss_xy = (torch.pow(y_pred_xy-y_true_xy,2).sum() * self.lbd_coord)/bs
-        loss_wh = (torch.pow(y_pred_wh-y_true_wh,2).sum() * self.lbd_coord)/bs
-        loss_obj = (torch.pow(y_pred_conf-y_true_conf,2).sum())/bs
-        loss_cls = (torch.pow(y_pred_cls-y_true_cls,2).sum() * self.lbd_cls)/bs
+        loss_xy = F.mse_loss(y_pred_xy,y_true_xy) * self.lbd_coord
+        loss_wh = F.mse_loss(y_pred_wh,y_true_wh) * self.lbd_coord
+        
+        loss_cls = F.binary_cross_entropy(y_pred_cls,y_true_cls) * self.lbd_cls
         loss = loss_xy + loss_wh + loss_obj + loss_noobj + loss_cls
         
         return loss,loss_xy,loss_wh,loss_obj,loss_noobj,loss_cls
