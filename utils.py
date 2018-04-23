@@ -27,6 +27,12 @@ def data_to_df(y_pred,head=10):
 
     bbmax = y_pred[...,:4].contiguous().view(-1,4).data.numpy()*32
     df_bbox = pd.DataFrame(bbmax,columns=["x","y","w","h"])
+    
+    df_bbox["x"]=df_bbox["x"]-(df_bbox["w"]/2)
+    df_bbox["y"]=df_bbox["y"]-(df_bbox["h"]/2)
+    df_bbox["x"][df_bbox["x"]<0]=0.
+    df_bbox["y"][df_bbox["y"]<0]=0.
+    
     return pd.concat([df_lbl,df_bbox],axis=1).sort_values(by="conf",ascending=False).head(head).reset_index()
 
 #plot_bb(img,data_to_df(loss.t2b(y_pred[0])))
