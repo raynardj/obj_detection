@@ -5,7 +5,7 @@ from torch.nn import functional as F
 
 from constant import *
 
-AVG=True
+AVG=False
 mse = nn.MSELoss(size_average=AVG)
 ce = nn.CrossEntropyLoss(size_average=AVG)
 
@@ -89,8 +89,8 @@ class yolo3_loss_on_t(yloss_basic):
         
         y_pred[...,4] = F.sigmoid(y_pred[...,4])
         
-        y_true = (y_true * mask).float()
-        y_pred = (y_pred * mask).float()
+        mask = mask.float()
+        mask2 = mask2.float()
     
         y_true_noobj = (y_true * mask2).float()[...,4]
         y_pred_noobj = (y_pred * mask2).float()[...,4]
@@ -106,7 +106,7 @@ class yolo3_loss_on_t(yloss_basic):
         # y_true_conf = ioumap * y_true[...,4]
         y_true_conf = y_true[...,4]
         
-        y_pred_cls = y_pred[...,5:]
+        y_pred_cls = F.softmax(y_pred[...,5:],dim=-1)
         y_true_cls = y_true[...,5:]
         
         if self.testing:
@@ -122,15 +122,15 @@ class yolo3_loss_on_t(yloss_basic):
                   "\t",torch.max(y_true_cls[0,idxw,idxh,idxb])[0].data[0])
         
         loss_noobj = mse(y_pred_noobj,y_true_noobj)/2.0 * self.lbd_noobj
-        loss_obj = mse(y_pred_conf, y_true_conf)/2.0
+        loss_obj = mse(y_pred_conf*mask[...,4], y_true_conf*mask[...,4])/2.0
 
-        loss_x = mse(y_pred_xy[...,0],y_true_xy[...,0])/2.0 * self.lbd_coord
-        loss_y = mse(y_pred_xy[...,1],y_true_xy[...,1])/2.0 * self.lbd_coord
-        loss_w = mse(y_pred_wh[...,0],y_true_wh[...,0])/2.0 * self.lbd_coord
-        loss_h = mse(y_pred_wh[...,1],y_true_wh[...,1])/2.0 * self.lbd_coord
+        loss_x = mse(y_pred_xy[...,0]*mask[...,0],y_true_xy[...,0]*mask[...,0])/2.0 * self.lbd_coord
+        loss_y = mse(y_pred_xy[...,1]*mask[...,1],y_true_xy[...,1]*mask[...,1])/2.0 * self.lbd_coord
+        loss_w = mse(y_pred_wh[...,0]*mask[...,2],y_true_wh[...,0]*mask[...,2])/2.0 * self.lbd_coord
+        loss_h = mse(y_pred_wh[...,1]*mask[...,3],y_true_wh[...,1]*mask[...,3])/2.0 * self.lbd_coord
 
-        loss_cls = ce(y_pred_cls.contiguous().view(-1,CLS_LEN),
-                      y_true_cls.max(dim=-1)[1].contiguous().view(-1))* self.lbd_cls
+        loss_cls = ce((y_pred_cls*mask[...,5:]).contiguous().view(-1,CLS_LEN),
+                      (y_true_cls*mask[...,5:]).max(dim=-1)[1].contiguous().view(-1))* self.lbd_cls
         
         loss = loss_x + loss_y + loss_w + loss_h + loss_obj + loss_noobj + loss_cls
         
