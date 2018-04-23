@@ -2,28 +2,25 @@ import numpy as np
 import pandas as pd
 import torch
 import json
+import os
 
+HOME = os.environ['HOME']+"/"
 
 # Terminus
-
-# HOME = "/home/zhangxiaochen/"
-# DATA = "/terminus/coco/"
-# IMG = DATA+"train2017/"
-# ANN = DATA+"annotations/instances_train2017.json"
-
+if HOME == "/home/zhangxiaochen/":
+    DATA = "/terminus/coco/"
+    IMG = DATA+"train2017/"
+    ANN = DATA+"annotations/instances_train2017.json"
 # Macbook
-
-# HOME = "/Users/zhangxiaochen/"
-# DATA = "/data/coco/"
-# IMG = DATA+"val2017/"
-# ANN = DATA+"annotations/instances_val2017.json"
-
+elif HOME == "/Users/zhangxiaochen/":
+    DATA = "/data/coco/"
+    IMG = DATA+"val2017/"
+    ANN = DATA+"annotations/instances_val2017.json"
 # Jupiter AWS
-
-HOME = "/home/ubuntu/"
-DATA = "/data/"
-IMG = DATA+"val2017/"
-ANN = DATA+"annotations/instances_val2017.json"
+elif HOME == "/home/ubuntu/":
+    DATA = "/data/"
+    IMG = DATA+"val2017/"
+    ANN = DATA+"annotations/instances_val2017.json"
 
 # --------------------------------------------------
 

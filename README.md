@@ -4,11 +4,11 @@
 
 ### Modules:
 
+* obj_detection.ipynb - The experimental notebook
 * constant.py - configurations
 * data.py -  data generator for obj detection
 * loss_.py - loss function
 * utils.py - tools and other functions
-
 
 ### Reference:
 

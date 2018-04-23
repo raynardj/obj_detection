@@ -29,7 +29,10 @@ class odData(dataset.Dataset):
                                                           self.vec_loc[idx])
         if self.testing:
             slicing = vec_loc[...,0],vec_loc[...,1],vec_loc[...,2]
-            print("b",true_lbl[vec_loc[...,0],vec_loc[...,1],vec_loc[...,2],:5],"\ttxy",t_xy[slicing],"\ttwh",t_wh[slicing])
+            print("b",true_lbl[vec_loc[...,0],
+                               vec_loc[...,1],
+                               vec_loc[...,2],:5],
+                  "\ttxy",t_xy[slicing],"\ttwh",t_wh[slicing])
         return sample,true_lbl,original,mask,vec_loc,t_xy,t_wh
     
     def true_label(self,true_adj,vec_loc):
@@ -37,7 +40,7 @@ class odData(dataset.Dataset):
         Create true label for training
         """
         mask = self.mask_from_loca(vec_loc)
-        true_adj_t = self.b2t_wh(self.b2t_xy(true_adj))
+        true_adj_t = self.b2t_wh(self.b2t_xy(true_adj.copy()))
         true_adj *= np.tile(mask[:,:,:,np.newaxis],[1,1,1,true_adj.shape[-1]])
         
         true_adj_t *= np.tile(mask[:,:,:,np.newaxis],[1,1,1,true_adj_t.shape[-1]])
@@ -47,8 +50,8 @@ class odData(dataset.Dataset):
     
     def b2t_xy(self,x):
         x[...,:2] = x[...,:2]-np.floor(x[...,:2])
-        x[...,:2] = np.clip(x[...,:2],1e-4,(1.-1e-4))
-        x[...,:2] = -np.log(1/x[...,:2]-1)
+#         x[...,:2] = np.clip(x[...,:2],1e-4,(1.-1e-4))
+#         x[...,:2] = -np.log(1/x[...,:2]-1)
         return x
     
     def b2t_wh(self,x):
