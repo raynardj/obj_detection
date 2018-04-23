@@ -50,8 +50,8 @@ class odData(dataset.Dataset):
     
     def b2t_xy(self,x):
         x[...,:2] = x[...,:2]-np.floor(x[...,:2])
-        x[...,:2] = np.clip(x[...,:2],1e-4,(1.-1e-4))
-        x[...,:2] = -np.log(1/x[...,:2]-1)
+#         x[...,:2] = np.clip(x[...,:2],1e-4,(1.-1e-4))
+#         x[...,:2] = -np.log(1/x[...,:2]-1)
         return x
     
     def b2t_wh(self,x):

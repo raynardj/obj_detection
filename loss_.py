@@ -5,6 +5,10 @@ from torch.nn import functional as F
 
 from constant import *
 
+AVG=True
+mse = nn.MSELoss(size_average=AVG)
+ce = nn.CrossEntropyLoss(size_average=AVG)
+
 class t2b(nn.Module):
     def __init__(self):
         super(t2b,self).__init__()
@@ -83,15 +87,15 @@ class yolo3_loss_on_t(yloss_basic):
         y_true = y_true.float()
         y_pred = y_pred.float()
         
-        y_pred[...,4:] = F.sigmoid(y_pred[...,4:])
+        y_pred[...,4] = F.sigmoid(y_pred[...,4])
         
-#         y_true = (y_true * mask).float()
+        y_true = (y_true * mask).float()
         y_pred = (y_pred * mask).float()
     
         y_true_noobj = (y_true * mask2).float()[...,4]
         y_pred_noobj = (y_pred * mask2).float()[...,4]
         
-        y_pred_xy = y_pred[...,:2]
+        y_pred_xy = F.sigmoid(y_pred[...,:2])
         y_true_xy = t_xy.float()
         
         y_pred_wh = y_pred[...,2:4]
@@ -99,8 +103,8 @@ class yolo3_loss_on_t(yloss_basic):
         
         # y_pred_conf = ioumap * y_pred[...,4]
         y_pred_conf = y_pred[...,4]
-        y_true_conf = ioumap * y_true[...,4]
-        # y_true_conf = y_true[...,4]
+        # y_true_conf = ioumap * y_true[...,4]
+        y_true_conf = y_true[...,4]
         
         y_pred_cls = y_pred[...,5:]
         y_true_cls = y_true[...,5:]
@@ -117,16 +121,20 @@ class yolo3_loss_on_t(yloss_basic):
             print("cls",torch.max(y_pred_cls[0,idxw,idxh,idxb])[0].data[0],
                   "\t",torch.max(y_true_cls[0,idxw,idxh,idxb])[0].data[0])
         
-        loss_noobj = F.mse_loss(y_pred_noobj,y_true_noobj) * self.lbd_noobj
-        loss_obj = F.mse_loss(y_pred_conf, y_true_conf)
+        loss_noobj = mse(y_pred_noobj,y_true_noobj)/2.0 * self.lbd_noobj
+        loss_obj = mse(y_pred_conf, y_true_conf)/2.0
 
-        loss_xy = F.mse_loss(y_pred_xy,y_true_xy) * self.lbd_coord
-        loss_wh = F.mse_loss(y_pred_wh,y_true_wh) * self.lbd_coord
+        loss_x = mse(y_pred_xy[...,0],y_true_xy[...,0])/2.0 * self.lbd_coord
+        loss_y = mse(y_pred_xy[...,1],y_true_xy[...,1])/2.0 * self.lbd_coord
+        loss_w = mse(y_pred_wh[...,0],y_true_wh[...,0])/2.0 * self.lbd_coord
+        loss_h = mse(y_pred_wh[...,1],y_true_wh[...,1])/2.0 * self.lbd_coord
 
-        loss_cls = F.binary_cross_entropy(y_pred_cls,y_true_cls)* self.lbd_cls
-        loss = loss_xy + loss_wh + loss_obj + loss_noobj + loss_cls
+        loss_cls = ce(y_pred_cls.contiguous().view(-1,CLS_LEN),
+                      y_true_cls.max(dim=-1)[1].contiguous().view(-1))* self.lbd_cls
         
-        return loss,loss_xy,loss_wh,loss_obj,loss_noobj,loss_cls
+        loss = loss_x + loss_y + loss_w + loss_h + loss_obj + loss_noobj + loss_cls
+        
+        return loss,loss_x,loss_y,loss_w,loss_h,loss_obj,loss_noobj,loss_cls
 
     
 class yolo3_loss_on_b(yloss_basic):
