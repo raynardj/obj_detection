@@ -1,9 +1,7 @@
-import torch
-from torch import nn
-from torch.autograd import Variable
-from torch.nn import functional as F
-
 from constant import *
+from torch import nn
+from torch.nn import functional as F
+import torch
 
 AVG=False
 mse = nn.MSELoss(size_average=AVG)
@@ -66,8 +64,17 @@ class yolo3_loss_on_t(yloss_basic):
         super(yolo3_loss_on_t,self).__init__(lbd_coord,lbd_obj,lbd_noobj,lbd_cls,testing,train_all)
     
     def forward(self,y_pred,t_box, conf_, cls_, mask, cls_mask, b_box):
-        bs = t_box.size()[0]
-
+        """
+        Forward Calculation of loss function
+        :param y_pred: bs * grid_width * grid_height * boxes * (4+1+classes)
+        :param t_box: bounding box $t$ t is easy for training
+        :param conf_:  confidence, objectiveness score
+        :param cls_:  class index
+        :param mask: mask of the seen object
+        :param cls_mask:
+        :param b_box: bounding box $b$ b * downsampling scale(32) is the pixel size of resized image
+        :return: loss,loss_x,loss_y,loss_w,loss_h,loss_obj,loss_noobj,loss_cls
+        """
         t_box = t_box.float()
         b_box = b_box.float()
         conf_=conf_.float()
@@ -76,8 +83,6 @@ class yolo3_loss_on_t(yloss_basic):
         ioumap = self.calc_iou(b_box,y_pred_b).detach()
 
         y_pred = y_pred.float()
-        
-        # y_pred[...,4:5] = F.sigmoid(y_pred[...,4:5])
 
         mask2 = (mask==0)*(ioumap<.5)
         
@@ -87,9 +92,6 @@ class yolo3_loss_on_t(yloss_basic):
         
         mask_slice = mask.float()
         mask2_slice = mask2.float()
-        
-        oh_slice = (cls_mask.repeat(1, 1, 1, 1, CLS_LEN) == 1)
-        idx_slice = (cls_mask == 1)
 
         loss_noobj = self.lbd_noobj * mse(y_pred_conf*mask2_slice,conf_*mask2_slice)/2.0
         loss_obj = self.lbd_obj * mse(y_pred_conf*mask_slice, ioumap*mask_slice)/2.0
@@ -100,7 +102,6 @@ class yolo3_loss_on_t(yloss_basic):
         loss_h = self.lbd_coord * mse(y_pred_wh[...,1:2]*mask_slice,t_box[...,3:4]*mask_slice)/2.0
         
         y_pred_cls = F.softmax((y_pred[...,5:][mask==1]).view(-1,CLS_LEN),dim=-1)
-        # y_pred_cls = y_pred[...,5:][mask==1].view(-1,CLS_LEN)
 
         if self.testing:
             print( y_pred_cls[0],cls_[mask==1].view(-1).long()[0])

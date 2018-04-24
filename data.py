@@ -1,10 +1,8 @@
 from torch.utils.data import dataset
-
 from constant import *
 import numpy as np
 
 from PIL import Image
-from torchvision import transforms
 
 class Data_Multi(dataset.Dataset):
     def __init__(self, data_df, testing=False, *args, **kwargs):
