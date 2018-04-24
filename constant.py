@@ -24,10 +24,10 @@ elif HOME == "/home/ubuntu/":
 
 # --------------------------------------------------
 
-SIZE = 416 # 13 * 32
+SIZE = 320 # 13 * 32
 
-HEIGHT = 416
-WIDTH = 416
+HEIGHT = SIZE
+WIDTH = SIZE
 
 SCALE =32
 
