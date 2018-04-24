@@ -93,7 +93,6 @@ class yolo3_loss_on_t(yloss_basic):
         y_pred_xy = F.sigmoid(y_pred[...,:2])
         y_pred_wh = y_pred[...,2:4]
         y_pred_conf = y_pred[...,4:5]
-        y_pred_cls = y_pred[...,5:]
 
         if self.testing:
             pass
@@ -105,14 +104,16 @@ class yolo3_loss_on_t(yloss_basic):
 
         loss_noobj = mse(y_pred_conf*mask2_slice,conf_*mask2_slice)/2.0 * self.lbd_noobj
 
-        loss_obj = mse(y_pred_conf*mask_slice, conf_*mask_slice)/2.0
+        loss_obj = mse(y_pred_conf*mask_slice, ioumap*mask_slice)/2.0
 
         loss_x = mse(y_pred_xy[...,0:1]*mask_slice,t_box[...,0:1]*mask_slice)/2.0 * self.lbd_coord
         loss_y = mse(y_pred_xy[...,1:2]*mask_slice,t_box[...,1:2]*mask_slice)/2.0 * self.lbd_coord
         loss_w = mse(y_pred_wh[...,0:1]*mask_slice,t_box[...,2:3]*mask_slice)/2.0 * self.lbd_coord
         loss_h = mse(y_pred_wh[...,1:2]*mask_slice,t_box[...,3:4]*mask_slice)/2.0 * self.lbd_coord
+        
+        y_pred_cls = F.softmax((y_pred[...,5:][oh_slice]).view(-1,CLS_LEN),dim=-1)
 
-        loss_cls = ce((y_pred_cls[oh_slice]).view(-1,CLS_LEN),
+        loss_cls = ce(y_pred_cls,
                       cls_[idx_slice].view(-1).long())* self.lbd_cls
         
         loss = loss_x + loss_y + loss_w + loss_h + loss_obj + loss_noobj + loss_cls

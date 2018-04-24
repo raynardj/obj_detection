@@ -50,8 +50,8 @@ class odData(dataset.Dataset):
     
     def b2t_xy(self,x):
         x[...,:2] = x[...,:2]-np.floor(x[...,:2])
-#         x[...,:2] = np.clip(x[...,:2],1e-4,(1.-1e-4))
-#         x[...,:2] = -np.log(1/x[...,:2]-1)
+        x[...,:2] = np.clip(x[...,:2],1e-4,(1.-1e-4))
+        x[...,:2] = -np.log(1/x[...,:2]-1)
         return x
     
     def b2t_wh(self,x):
@@ -139,10 +139,12 @@ class Data_Multi(dataset.Dataset):
         return IMG + self.ids2fn[image_id]
 
     def b2t_xy(self, x):
+        x=x.copy()
         x[..., :2] = x[..., :2] - np.floor(x[..., :2])
         return x
 
     def b2t_wh(self, x, posi):
+        x=x.copy()
         x[..., 2:4] = np.clip(x[..., 2:4], 1e-2, 12.999)
         lb_s = x.shape[0]
         anc_tile = np.tile(self.anc[np.newaxis, :, :], [lb_s, 1, 1])
