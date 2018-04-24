@@ -6,6 +6,8 @@ import os
 
 HOME = os.environ['HOME']+"/"
 
+# set up your own config here
+
 # Terminus
 if HOME == "/home/zhangxiaochen/":
     DATA = "/terminus/coco/"
