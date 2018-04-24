@@ -22,13 +22,15 @@ class t2b(nn.Module):
         x=x.float()
         xy=F.sigmoid(x[...,:2])+self.grid.repeat(bs,1,1,1,1)
         wh=torch.exp(x[...,2:4])*self.anc.repeat(bs,FEAT_W,FEAT_H,1,1)
-        others=F.sigmoid(x[...,4:])
+        conf=F.sigmoid(x[...,4:5])
+        cls_=F.softmax(x[...,5:],dim=-1)
+        # cls_=x[...,5:]
         
-        x = torch.cat([xy,wh,others],dim=-1)
+        x = torch.cat([xy,wh,conf,cls_],dim=-1)
         return x
     
 class yloss_basic(nn.Module):
-    def __init__(self,lbd_coord,lbd_noobj,lbd_cls,testing):
+    def __init__(self,lbd_coord,lbd_obj,lbd_noobj,lbd_cls,testing,train_all):
         """
         lbd_coord: lambda_coordinate
         lbd_noobj: lambda_no_object
@@ -36,9 +38,11 @@ class yloss_basic(nn.Module):
         super(yloss_basic,self).__init__()
         self.t2b=t2b()
         self.lbd_coord = lbd_coord
+        self.lbd_obj = lbd_obj
         self.lbd_noobj = lbd_noobj
         self.lbd_cls = lbd_cls
         self.testing = testing
+        self.train_all = train_all
         
     def calc_iou(self,y_true,y_pred):
         """
@@ -53,26 +57,13 @@ class yloss_basic(nn.Module):
     
         return (inter/union).unsqueeze(-1)
     
-    def loss_mask(self,y_true,y_pred,lbl_mask):
-        ioumap = self.calc_iou(y_true,y_pred)
-
-        mask = lbl_mask.unsqueeze(-1).repeat(1,1,1,1,VEC_LEN)
-    
-        mask2 = (ioumap<0.5).unsqueeze(-1).repeat(1,1,1,1,VEC_LEN).float()
-        mask2[...,:4]=0
-        mask2[...,5:]=0
-        mask2-=mask
-        mask2=torch.clamp(mask2,0,1)
-    
-        return mask.detach(),mask2.detach(),ioumap.detach()
-    
 class yolo3_loss_on_t(yloss_basic):
-    def __init__(self,lbd_coord=5,lbd_noobj=.5,lbd_cls=1,testing=False):
+    def __init__(self,lbd_coord=1,lbd_obj=5,lbd_noobj=1,lbd_cls=1,testing=False,train_all=True):
         """
         lbd_coord: lambda_coordinate
         lbd_noobj: lambda_no_object
         """
-        super(yolo3_loss_on_t,self).__init__(lbd_coord,lbd_noobj,lbd_cls,testing)
+        super(yolo3_loss_on_t,self).__init__(lbd_coord,lbd_obj,lbd_noobj,lbd_cls,testing,train_all)
     
     def forward(self,y_pred,t_box, conf_, cls_, mask, cls_mask, b_box):
         bs = t_box.size()[0]
@@ -86,96 +77,36 @@ class yolo3_loss_on_t(yloss_basic):
 
         y_pred = y_pred.float()
         
-        y_pred[...,4:5] = F.sigmoid(y_pred[...,4:5])
+        # y_pred[...,4:5] = F.sigmoid(y_pred[...,4:5])
 
         mask2 = (mask==0)*(ioumap<.5)
         
         y_pred_xy = F.sigmoid(y_pred[...,:2])
         y_pred_wh = y_pred[...,2:4]
-        y_pred_conf = y_pred[...,4:5]
-
-        if self.testing:
-            pass
+        y_pred_conf = F.sigmoid(y_pred[...,4:5])
         
         mask_slice = mask.float()
         mask2_slice = mask2.float()
+        
         oh_slice = (cls_mask.repeat(1, 1, 1, 1, CLS_LEN) == 1)
         idx_slice = (cls_mask == 1)
 
-        loss_noobj = mse(y_pred_conf*mask2_slice,conf_*mask2_slice)/2.0 * self.lbd_noobj
+        loss_noobj = self.lbd_noobj * mse(y_pred_conf*mask2_slice,conf_*mask2_slice)/2.0
+        loss_obj = self.lbd_obj * mse(y_pred_conf*mask_slice, ioumap*mask_slice)/2.0
 
-        loss_obj = mse(y_pred_conf*mask_slice, ioumap*mask_slice)/2.0
-
-        loss_x = mse(y_pred_xy[...,0:1]*mask_slice,t_box[...,0:1]*mask_slice)/2.0 * self.lbd_coord
-        loss_y = mse(y_pred_xy[...,1:2]*mask_slice,t_box[...,1:2]*mask_slice)/2.0 * self.lbd_coord
-        loss_w = mse(y_pred_wh[...,0:1]*mask_slice,t_box[...,2:3]*mask_slice)/2.0 * self.lbd_coord
-        loss_h = mse(y_pred_wh[...,1:2]*mask_slice,t_box[...,3:4]*mask_slice)/2.0 * self.lbd_coord
+        loss_x = self.lbd_coord * mse(y_pred_xy[...,0:1]*mask_slice,t_box[...,0:1]*mask_slice)/2.0
+        loss_y = self.lbd_coord * mse(y_pred_xy[...,1:2]*mask_slice,t_box[...,1:2]*mask_slice)/2.0
+        loss_w = self.lbd_coord * mse(y_pred_wh[...,0:1]*mask_slice,t_box[...,2:3]*mask_slice)/2.0
+        loss_h = self.lbd_coord * mse(y_pred_wh[...,1:2]*mask_slice,t_box[...,3:4]*mask_slice)/2.0
         
-        y_pred_cls = F.softmax((y_pred[...,5:][oh_slice]).view(-1,CLS_LEN),dim=-1)
+        y_pred_cls = F.softmax((y_pred[...,5:][mask==1]).view(-1,CLS_LEN),dim=-1)
+        # y_pred_cls = y_pred[...,5:][mask==1].view(-1,CLS_LEN)
 
-        loss_cls = ce(y_pred_cls,
-                      cls_[idx_slice].view(-1).long())* self.lbd_cls
+        if self.testing:
+            print( y_pred_cls[0],cls_[mask==1].view(-1).long()[0])
+        loss_cls = self.lbd_cls * ce(y_pred_cls,
+                                     cls_[mask==1].view(-1).long())
         
-        loss = loss_x + loss_y + loss_w + loss_h + loss_obj + loss_noobj + loss_cls
+        loss = loss_x*self.train_all + loss_y*self.train_all + loss_w*self.train_all + loss_h*self.train_all + loss_obj*self.train_all + loss_noobj*self.train_all + loss_cls
         
         return loss,loss_x,loss_y,loss_w,loss_h,loss_obj,loss_noobj,loss_cls
-
-    
-class yolo3_loss_on_b(yloss_basic):
-    def __init__(self,lbd_coord=5,lbd_noobj=.1,lbd_cls=1,testing=False):
-        """
-        lbd_coord: lambda_coordinate
-        lbd_noobj: lambda_no_object
-        """
-        super(yolo3_loss_on_b,self).__init__(lbd_coord,lbd_noobj,lbd_cls,testing)
-    
-    def forward(self,y_pred,y_true,lbl_mask,vec_loc,t_xy,t_wh):
-        bs = y_true.size()[0]
-        y_pred = self.t2b(y_pred.float())
-        y_true = y_true.float()
-        lbl_mask = lbl_mask.float()
-        
-        mask,mask2,ioumap = self.loss_mask(y_true,y_pred,lbl_mask)
-        
-        y_true = y_true.float()
-        y_pred = y_pred.float()
-        
-#         y_true = (y_true * mask).float()
-        y_pred = (y_pred * mask).float()        
-        y_true_noobj = (y_true * mask2).float()
-        y_pred_noobj = (y_pred * mask2).float()
-        
-        y_pred_xy = y_pred[...,:2]
-        y_true_xy = y_true[...,:2]
-        
-        y_pred_wh=torch.sqrt(F.relu(y_pred[...,2:4]))
-        y_true_wh=torch.sqrt(y_true[...,2:4])
-        # y_pred_wh=y_pred[...,2:4]
-        # y_true_wh=y_true[...,2:4]
-        
-        y_pred_conf = y_pred[...,4]
-#         y_true_conf = ioumap * y_true[...,4]
-        y_true_conf = y_true[...,4]
-        
-        y_pred_cls = y_pred[...,5:]
-        y_true_cls = y_true[...,5:]
-        
-        if self.testing:
-            idxw,idxh,idxb = vec_loc[0,...,0].data[0],vec_loc[0,...,1].data[0],vec_loc[0,...,2].data[0]
-            print("bb",y_pred[0,idxw,idxh,idxb,:4].view(-1).data.cpu().numpy(),
-              "\t",y_true[0,idxw,idxh,idxb,:4].view(-1).data.cpu().numpy())
-            print("conf",y_pred_conf[0,idxw,idxh,idxb].data[0],
-                  "\t",y_true_conf[0,idxw,idxh,idxb].data[0])
-            print("cls",torch.max(y_pred_cls[0,idxw,idxh,idxb])[0].data[0],
-                  "\t",torch.max(y_true_cls[0,idxw,idxh,idxb])[0].data[0])
-        
-        loss_noobj = F.mse_loss(y_pred_noobj[...,4],y_true_noobj[...,4]) * self.lbd_noobj
-        loss_obj = F.mse_loss(y_pred_conf,y_true_conf)
-        
-        loss_xy = F.mse_loss(y_pred_xy,y_true_xy) * self.lbd_coord
-        loss_wh = F.mse_loss(y_pred_wh,y_true_wh) * self.lbd_coord
-        
-        loss_cls = F.binary_cross_entropy(y_pred_cls,y_true_cls) * self.lbd_cls
-        loss = loss_xy + loss_wh + loss_obj + loss_noobj + loss_cls
-        
-        return loss,loss_xy,loss_wh,loss_obj,loss_noobj,loss_cls
