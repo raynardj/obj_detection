@@ -94,7 +94,7 @@ class yolo3_loss_on_t(yloss_basic):
         mask2_slice = mask2.float()
 
         loss_noobj = self.lbd_noobj * mse(y_pred_conf*mask2_slice,conf_*mask2_slice)/2.0
-        loss_obj = self.lbd_obj * mse(y_pred_conf*mask_slice, ioumap*mask_slice)/2.0
+        loss_obj = mse(y_pred_conf*mask_slice, self.lbd_obj * ioumap * mask_slice)/2.0
 
         loss_x = self.lbd_coord * mse(y_pred_xy[...,0:1]*mask_slice,t_box[...,0:1]*mask_slice)/2.0
         loss_y = self.lbd_coord * mse(y_pred_xy[...,1:2]*mask_slice,t_box[...,1:2]*mask_slice)/2.0
