@@ -7,9 +7,10 @@ import matplotlib.text as text
 import torch
 import pandas as pd
 import numpy as np
+from torch.autograd import Variable
 
 COLORS = ["#ff0000","#ffff00","#ff00ff","#00ffff","#00ff00","#0000ff","#ffffff"]
-bx_grid=torch.arange(0,BOX).unsqueeze(0).unsqueeze(0).repeat(1,FEAT_W,FEAT_H,1)
+bx_grid=Variable(torch.arange(0,BOX).unsqueeze(0).unsqueeze(0).repeat(1,FEAT_W,FEAT_H,1))
 
 def plot_bb(img,bbdf):
     fig,ax = plt.subplots(1)
@@ -46,6 +47,8 @@ def data_to_df(y_pred,head=10):
     return pd.concat([df_lbl,df_bbox],axis=1).sort_values(by="conf",ascending=False).head(head).reset_index()
 
 def data_to_df_bmark(y_pred,head=5,bm=.50):
+    y_pred=y_pred.cpu()
+    y_pred=y_pred.detach()
     bs = y_pred.size()[0]
     val, idx = torch.max(y_pred[..., 4], dim=-1)
     pick = (idx.unsqueeze(-1) == bx_grid.repeat(bs, 1, 1, 1).long())
@@ -56,7 +59,7 @@ def data_to_df_bmark(y_pred,head=5,bm=.50):
     conf_ = y_pred[..., 4][pick].view(-1, 1)
     box_ = y_pred[..., :4][pick.unsqueeze(-1).repeat(1, 1, 1, 1, 4)].view(-1, 4) * 32
 
-    combine = torch.cat([box_, conf_, cls_], dim=-1).numpy()
+    combine = torch.cat([box_, conf_, cls_], dim=-1).data.numpy()
 
     df_bbox = pd.DataFrame(combine[combine[..., 4] > bm], columns=["x", "y", "w", "h", "conf", "cate"])
 
