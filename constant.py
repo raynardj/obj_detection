@@ -2,35 +2,34 @@ import numpy as np
 import pandas as pd
 import torch
 import json
+import os
 
+HOME = os.environ['HOME']+"/"
+
+# set up your own config here
 
 # Terminus
-
-# HOME = "/home/zhangxiaochen/"
-# DATA = "/terminus/coco/"
-# IMG = DATA+"train2017/"
-# ANN = DATA+"annotations/instances_train2017.json"
-
+if HOME == "/home/zhangxiaochen/":
+    DATA = "/terminus/coco/"
+    IMG = DATA+"train2017/"
+    ANN = DATA+"annotations/instances_train2017.json"
 # Macbook
-
-# HOME = "/Users/zhangxiaochen/"
-# DATA = "/data/coco/"
-# IMG = DATA+"val2017/"
-# ANN = DATA+"annotations/instances_val2017.json"
-
+elif HOME == "/Users/zhangxiaochen/":
+    DATA = "/data/coco/"
+    IMG = DATA+"val2017/"
+    ANN = DATA+"annotations/instances_val2017.json"
 # Jupiter AWS
-
-HOME = "/home/ubuntu/"
-DATA = "/data/"
-IMG = DATA+"val2017/"
-ANN = DATA+"annotations/instances_val2017.json"
+elif HOME == "/home/ubuntu/":
+    DATA = "/data/"
+    IMG = DATA+"val2017/"
+    ANN = DATA+"annotations/instances_val2017.json"
 
 # --------------------------------------------------
 
-SIZE = 416 # 13 * 32
+SIZE = 320 # 13 * 32
 
-HEIGHT = 416
-WIDTH = 416
+HEIGHT = SIZE
+WIDTH = SIZE
 
 SCALE =32
 

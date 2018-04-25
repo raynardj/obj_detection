@@ -1,14 +1,17 @@
 # Ray's Object Detection Framework
 
 ## A pytorch deployment
+## On yolo v3 style model
 
 ### Modules:
 
+* obj_detection.ipynb - The trunk line experimental notebook
+    * For now it's DenseNet121 (Very LightWeight, resilient to over-fitting)
 * constant.py - configurations
 * data.py -  data generator for obj detection
 * loss_.py - loss function
 * utils.py - tools and other functions
-
+* conv_modle.py - feature extractor
 
 ### Reference:
 
