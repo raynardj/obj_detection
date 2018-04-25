@@ -44,14 +44,17 @@ def data_to_df(y_pred,head=10):
     
     return pd.concat([df_lbl,df_bbox],axis=1).sort_values(by="conf",ascending=False).head(head).reset_index()
 
-def data_to_df_bmark(y_pred,head=5,bm=.10):
+def data_to_df_bmark(y_pred,head=5,bm=.50):
     y_pred=y_pred.detach()
-    conf_b = (y_pred[...,4:5]>bm)
+    conf_, idx = torch.max(y_pred[..., 4], dim=-1)
+    conf_b = (conf_>bm)
     if conf_b.sum().data[0]==0:
         return None
     else:
-        conf = y_pred[...,4:5][conf_b]
+        conf = y_pred[...,4][conf_b]
+
         conf_cls = y_pred[...,5:][conf_b].view(-1,CLS_LEN)
+
         val_max, idx_max = torch.max(conf_cls, dim=-1)
     
         df_lbl = pd.DataFrame({"conf":conf.data.numpy(),"cate":idx_max.data.numpy()})
@@ -64,4 +67,4 @@ def data_to_df_bmark(y_pred,head=5,bm=.10):
         df_bbox["x"][df_bbox["x"]<0]=0.
         df_bbox["y"][df_bbox["y"]<0]=0.
     
-        return pd.concat([df_lbl,df_bbox],axis=1).sort_values(by="conf",ascending=False).head(head).reset_index()
+        return pd.concat([df_lbl,df_bbox],axis=1) # .sort_values(by="conf",ascending=False).head(head).reset_index()
