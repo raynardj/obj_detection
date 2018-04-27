@@ -3,7 +3,7 @@ from torch import nn
 from torch.nn import functional as F
 import torch
 
-AVG=False
+AVG = False
 mse = nn.MSELoss(size_average=AVG)
 ce = nn.CrossEntropyLoss(size_average=AVG)
 
@@ -94,14 +94,14 @@ class yolo3_loss_on_t(yloss_basic):
         mask2_slice = mask2.float()
 
         loss_noobj = self.lbd_noobj * mse(y_pred_conf*mask2_slice,conf_*mask2_slice)/2.0
-        loss_obj = self.lbd_obj * mse(y_pred_conf*mask_slice, ioumap*mask_slice)/2.0
+        loss_obj = mse(y_pred_conf*mask_slice, self.lbd_obj * ioumap * mask_slice)/2.0
 
         loss_x = self.lbd_coord * mse(y_pred_xy[...,0:1]*mask_slice,t_box[...,0:1]*mask_slice)/2.0
         loss_y = self.lbd_coord * mse(y_pred_xy[...,1:2]*mask_slice,t_box[...,1:2]*mask_slice)/2.0
         loss_w = self.lbd_coord * mse(y_pred_wh[...,0:1]*mask_slice,t_box[...,2:3]*mask_slice)/2.0
         loss_h = self.lbd_coord * mse(y_pred_wh[...,1:2]*mask_slice,t_box[...,3:4]*mask_slice)/2.0
         
-        y_pred_cls = F.softmax((y_pred[...,5:][mask==1]).view(-1,CLS_LEN),dim=-1)
+        y_pred_cls = F.softmax((y_pred[...,5:][(mask==1).repeat(1,1,1,1,CLS_LEN)]).view(-1,CLS_LEN),dim=-1)
 
         if self.testing:
             print( y_pred_cls[0],cls_[mask==1].view(-1).long()[0])
