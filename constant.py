@@ -6,8 +6,6 @@ import os
 
 HOME = os.environ['HOME']+"/"
 
-# set up your own config here
-
 # Terminus
 if HOME == "/home/zhangxiaochen/":
     DATA = "/terminus/coco/"
@@ -49,7 +47,7 @@ ANCHORS = [0.57273, 0.677385,
            7.88282, 3.52778, 
            9.77052, 9.16828]
 
-DN121 = HOME+".torch/models/dn121.pkl"
+DN121 = HOME+".torch/models/dn121_4.pkl"
 
 anchor = torch.from_numpy(np.array(ANCHORS,dtype=np.float)).view(1,1,1,5,2).type(torch.FloatTensor)
 
