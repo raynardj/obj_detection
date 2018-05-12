@@ -34,7 +34,7 @@ SCALE =32
 
 BOX = 2
 CLS_LEN = len(chars)
-VEC_LEN = BOX + CLS_LEN
+VEC_LEN = 5 + CLS_LEN
 
 FEAT_W = int(HEIGHT/SCALE)
 FEAT_H = int(WIDTH/SCALE)
