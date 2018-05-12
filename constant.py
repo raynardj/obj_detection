@@ -18,7 +18,7 @@ elif HOME == "/Users/zhangxiaochen/":
     IMG = DATA+"char_detect/"
     # ANN = DATA+"annotations/instances_val2017.json"
 # Jupiter AWS
-elif HOME == "/home/ubuntu/":
+elif HOME == "/home/paperspace/":
     DATA = "/data/forge/"
     IMG = DATA+"char_detect/"
     # ANN = DATA+"annotations/instances_val2017.json"
