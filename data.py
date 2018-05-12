@@ -77,7 +77,7 @@ class Data_Multi(dataset.Dataset):
         lb_s = x.shape[0]
         anc_tile = np.tile(self.anc[np.newaxis, :, :], [lb_s, 1, 1])
         # print(anc_map.shape)
-        x[..., 2:4] = x[..., 2:4] / anc_tile[np.eye(5)[posi[:, 2]] == 1]
+        x[..., 2:4] = x[..., 2:4] / anc_tile[np.eye(BOX)[posi[:, 2]] == 1]
         x[..., 2:4] = np.log(x[..., 2:4])
         return x
 
