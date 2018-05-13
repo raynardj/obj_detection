@@ -342,12 +342,13 @@ def action(*args,**kwargs):
 
     optimizer.step()
 
-    if iteration%30==0:
+    if iteration%10==0:
         y_pred = loss_func.t2b(y_)[0:1,...]
         if CUDA:
             y_pred = y_pred.cpu()
         img = back2PIL(original[0])
         printimg = plot_bb(img,data_to_df_bmark(y_pred))
+        torch.save(model.state_dict(), "%s.troch/models/char_0.1.pkl"%(HOME))
     return {"loss":loss.item(),
             "loss_x":loss_x.item(),
             "loss_y":loss_y.item(),
