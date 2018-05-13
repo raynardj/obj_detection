@@ -348,7 +348,7 @@ def action(*args,**kwargs):
             y_pred = y_pred.cpu()
         img = back2PIL(original[0])
         printimg = plot_bb(img,data_to_df_bmark(y_pred))
-        torch.save(model.state_dict(), "%s.troch/models/char_0.1.pkl"%(HOME))
+        torch.save(model.state_dict(), "%s.torch/models/char_0.1.pkl"%(HOME))
     return {"loss":loss.item(),
             "loss_x":loss_x.item(),
             "loss_y":loss_y.item(),
