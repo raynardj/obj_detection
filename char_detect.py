@@ -320,7 +320,7 @@ optimizer = Adam(model.parameters())
 
 
 # In[21]:
-
+model.load_state_dict(torch.load("%s.torch/models/char_0.1.pkl"%(HOME)))
 
 def action(*args,**kwargs):
     """
