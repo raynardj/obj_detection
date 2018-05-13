@@ -28,7 +28,8 @@ def plot_bb(img,bbdf):
                     row["y"],
                     idx2name[id2idx[int(row["cate"])]]+"%.3f"%row["conf"],
                     dict({"color":c}))
-    save = fig.savefig("/data/bbsample/%s.jpg"%(datetime.now().strftime("%H%M%S")))
+#     save = fig.savefig("/data/bbsample/%s.jpg"%(datetime.now().strftime("%H%M%S")))
+    save = fig.savefig("/data/bbsample/%s.jpg"%(datetime.now().strftime("%S")))
     
 def data_to_df(y_pred,head=10):
     c=y_pred[...,4:5].repeat(1,1,1,CLS_LEN)*y_pred[...,5:]
