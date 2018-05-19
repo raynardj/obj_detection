@@ -62,12 +62,13 @@ class Make_Char(dataset.Dataset):
         category_id = list()
         for i in range(nb_c):
             scale = rd(30,15)
-            x, y = rd(WIDTH - scale), rd(HEIGHT - scale)
+
             f_color = (rd(255), rd(255), rd(255), rd(200, 50))
             ft = rd_font(scale)  # font
             cate_id = np.random.choice(range(rg[0], rg[1]))
             txt = chars[cate_id]
             f_size = ft.getsize(text=txt)
+            x, y = rd(WIDTH - f_size[0]), rd(HEIGHT - f_size[1])
 
             draw.text((x, y), txt, f_color, font=ft)
 
@@ -127,12 +128,13 @@ class Make_Char_cn(dataset.Dataset):
         category_id = list()
         for i in range(nb_c):
             scale = rd(30, 15)
-            x, y = rd(WIDTH - scale), rd(HEIGHT - scale)
+
             f_color = (rd(255), rd(255), rd(255), rd(200, 50))
             ft = rd_font(scale)  # font
             cate_id = np.random.choice(range(rg[0], rg[1]))
             txt = chars[cate_id]
             f_size = ft.getsize(text=txt)
+            x, y = rd(WIDTH - f_size[0]), rd(HEIGHT - f_size[1])
 
             draw.text((x, y), txt, f_color, font=ft)
 
@@ -145,9 +147,11 @@ class Make_Char_cn(dataset.Dataset):
         bbox = list()
         category_id = list()
         for x, y in self.pairs[np.random.choice(range(100), 50, replace=False)]:
-            scale = rd(30, 15)
+            scale = rd(SCALE-15, 15)
             f_color = (rd(255), rd(255), rd(255), rd(200, 50))
+
             ft = rd_font(scale)  # font
+
             cate_id = np.random.choice(range(rg[0], rg[1]))
             txt = chars[cate_id]
             f_size = ft.getsize(text=txt)
