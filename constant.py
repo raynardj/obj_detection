@@ -7,8 +7,8 @@ from constant_char import *
 
 
 TRAIN_CLS = True
-REBUILD_DATA = True
-EXPERIMENT = True
+REBUILD_DATA = False
+EXPERIMENT = False
 
 # dir and locations
 
