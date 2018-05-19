@@ -22,12 +22,14 @@ if HOME == "/home/zhangxiaochen/":
     IMG_EPT = "/data/coco/train2017/"
 
 # Macbook
-elif HOME == "/Users/zhangxiaochen/":
+elif HOME[:6]=="/Users":
+    EXPERIMENT = True
     DATA = "/data/forge/"
     IMG_EPT = "/data/coco/val2017/"
 
 # Jupiter AWS
 elif HOME == "/home/paperspace/":
+    EXPERIMENT = False
     DATA = "/data/forge/"
     IMG_EPT = "/data/train2017/"
 

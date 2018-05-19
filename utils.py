@@ -3,7 +3,7 @@ import matplotlib.patches as patches
 
 from datetime import datetime
 from constant import *
-import matplotlib.text as text
+import matplotlib
 import torch
 import pandas as pd
 import numpy as np
@@ -11,6 +11,7 @@ from torch.autograd import Variable
 
 COLORS = ["#ff0000","#ffff00","#ff00ff","#00ffff","#00ff00","#0000ff","#ffffff"]
 bx_grid=Variable(torch.arange(0,BOX).unsqueeze(0).unsqueeze(0).repeat(1,FEAT_W,FEAT_H,1))
+msyh = matplotlib.font_manager.FontProperties(fname='/data/fonts_cn/msyh.ttf')
 
 def plot_bb(img,bbdf):
     fig,ax = plt.subplots(1)
@@ -27,9 +28,11 @@ def plot_bb(img,bbdf):
             ax.text(row["x"],
                     row["y"],
                     idx2name[id2idx[int(row["cate"])]]+"%.3f"%row["conf"],
-                    dict({"color":c}))
+                    dict({"color":c}),
+                    fontproperties=msyh,
+                    )
 #     save = fig.savefig("/data/bbsample/%s.jpg"%(datetime.now().strftime("%H%M%S")))
-    save = fig.savefig("/data/bbsample/%s.jpg"%(datetime.now().strftime("%S")))
+    fig.savefig("/data/bbsample/%s.jpg"%(datetime.now().strftime("%S")))
     
 def data_to_df(y_pred,head=10):
     c=y_pred[...,4:5].repeat(1,1,1,CLS_LEN)*y_pred[...,5:]
