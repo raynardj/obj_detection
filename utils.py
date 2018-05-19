@@ -9,6 +9,8 @@ import pandas as pd
 import numpy as np
 from torch.autograd import Variable
 
+plt.ioff()
+
 COLORS = ["#ff0000","#ffff00","#ff00ff","#00ffff","#00ff00","#0000ff","#ffffff"]
 bx_grid=Variable(torch.arange(0,BOX).unsqueeze(0).unsqueeze(0).repeat(1,FEAT_W,FEAT_H,1))
 msyh = matplotlib.font_manager.FontProperties(fname='/data/fonts_cn/msyh.ttf')
