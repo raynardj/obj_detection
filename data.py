@@ -14,7 +14,7 @@ class Data_Multi(dataset.Dataset):
         for k, v in kwargs.items():
             setattr(self, k, v)
         self.data_df = data_df
-        self.train_cls = train_cls # then the df will have a field called cls_only: 1 for training cls only
+        self.train_cls = train_cls # then the df will have a field called only_cls: 1 for training cls only
         self.img_ids = list(set(list(data_df["image_id"])))
         self.ids2fn = dict((k, v) for k, v in zip(self.data_df["image_id"], self.data_df["file_name"]))
         self.testing = testing
@@ -28,13 +28,13 @@ class Data_Multi(dataset.Dataset):
         img_df = self.data_df[self.data_df.image_id == self.img_ids[idx]].head(50)
 
         if self.train_cls:
-            cls_only = img_df["cls_only"][0]
+            only_cls = list(img_df["only_cls"])[0]
 
-        if cls_only:
-            img = Image.open(self.id2url_cls(self.img_ids[idx])).convert("RGB")
+        if only_cls:
+            img = Image.open(self.id2url(self.img_ids[idx])).convert("RGB")
 
         else:
-            img = Image.open(self.id2url(self.img_ids[idx])).convert("RGB")
+            img = Image.open(self.id2url_cls(self.img_ids[idx])).convert("RGB")
 
         sample = self.transform(img)
 
@@ -55,7 +55,7 @@ class Data_Multi(dataset.Dataset):
         conf_ = np.zeros((FEAT_W, FEAT_H, BOX, 1))
         cls_ = np.zeros((FEAT_W, FEAT_H, BOX, 1))
         mask = np.zeros((FEAT_W, FEAT_H, BOX, 1))
-        cls_mask = np.zeros((FEAT_W, FEAT_H, BOX, 1))
+        # cls_mask = np.zeros((FEAT_W, FEAT_H, BOX, 1))
 
         for i_lbl in range(N):
             t_box[posi[i_lbl, 0], posi[i_lbl, 1], posi[i_lbl, 2]] = t_xywh[i_lbl]
@@ -63,15 +63,15 @@ class Data_Multi(dataset.Dataset):
             conf_[posi[i_lbl, 0], posi[i_lbl, 1], posi[i_lbl, 2]] = 1
             cls_[posi[i_lbl, 0], posi[i_lbl, 1], posi[i_lbl, 2]] = cls_id[i_lbl]
             mask[posi[i_lbl, 0], posi[i_lbl, 1], posi[i_lbl, 2]] = 1
-            cls_mask[posi[i_lbl, 0], posi[i_lbl, 1], posi[i_lbl, 2]] = 1
+            # cls_mask[posi[i_lbl, 0], posi[i_lbl, 1], posi[i_lbl, 2]] = 1
 
         if self.testing:
-            for i in sample, t_box, conf_, cls_, mask, cls_mask, b_box:
+            for i in sample, t_box, conf_, cls_, mask, b_box:
                 print(i.shape)
         if self.train_cls:
-            return sample,original, t_box, conf_, cls_, mask, cls_mask, b_box, cls_only
+            return sample,original, t_box, conf_, cls_, mask, b_box, only_cls
         else:
-            return sample, original, t_box, conf_, cls_, mask, cls_mask, b_box
+            return sample, original, t_box, conf_, cls_, mask, b_box
 
     def get_id(self, url):
         return int(url.split("/")[-1].split(".")[0])
