@@ -158,7 +158,7 @@ import matplotlib
 
 
 # In[11]:
-
+plt.ioff()
 
 import torch
 from torch import nn
