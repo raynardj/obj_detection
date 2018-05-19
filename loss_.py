@@ -35,10 +35,7 @@ class yloss_basic(nn.Module):
         """
         super(yloss_basic,self).__init__()
         self.t2b=t2b()
-        self.lbd_coord = lbd_coord
-        self.lbd_obj = lbd_obj
-        self.lbd_noobj = lbd_noobj
-        self.lbd_cls = lbd_cls
+        self.resume_full()
         self.testing = testing
         self.train_all = train_all
         
@@ -54,6 +51,19 @@ class yloss_basic(nn.Module):
         union = y_true[...,2:4].prod(dim=-1) + y_pred[...,2:4].prod(dim=-1)-inter
     
         return (inter/union).unsqueeze(-1)
+
+    def only_cls(self):
+        """train only classification"""
+        self.lbd_coord = 0
+        self.obj = 0
+        self.noobj = 0
+        self.lbd_cls = 1
+
+    def resume_full(self):
+        self.lbd_obj = LBD_OBJ
+        self.lbd_coord = LBD_COORD
+        self.lbd_noobj = LBD_NOOBJ
+        self.lbd_cls = LBD_CLS
     
 class yolo3_loss_on_t(yloss_basic):
     def __init__(self,lbd_coord=1,lbd_obj=5,lbd_noobj=1,lbd_cls=1,testing=False,train_all=True):

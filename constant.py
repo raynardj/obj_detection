@@ -5,23 +5,39 @@ import json
 import os
 from constant_char import *
 
+
+TRAIN_CLS = True
+REBUILD_DATA = True
+EXPERIMENT = True
+
+# dir and locations
+
 HOME = os.environ['HOME']+"/"
+
+DATA = "/data/forge/"
 
 # Terminus
 if HOME == "/home/zhangxiaochen/":
     DATA = "/data/forge/"
-    IMG = DATA+"char_detect/"
-    # ANN = DATA+"annotations/instances_train2017.json"
+    IMG_EPT = "/data/coco/train2017/"
+
 # Macbook
 elif HOME == "/Users/zhangxiaochen/":
     DATA = "/data/forge/"
-    IMG = DATA+"char_detect/"
-    # ANN = DATA+"annotations/instances_val2017.json"
+    IMG_EPT = "/data/coco/val2017/"
+
 # Jupiter AWS
 elif HOME == "/home/paperspace/":
     DATA = "/data/forge/"
-    IMG = DATA+"char_detect/"
-    # ANN = DATA+"annotations/instances_val2017.json"
+    IMG_EPT = "/data/train2017/"
+
+IMG = DATA+"char_detect/"
+IMG_CLS = DATA+"char_detect_cn/"
+
+# ANN = DATA+"annotations/instances_val2017.json"
+
+ANN = DATA+"char_lbl.csv"
+ANN_CLS = DATA+"char_lbl_cn.csv"
 
 # --------------------------------------------------
 
@@ -38,6 +54,11 @@ VEC_LEN = 5 + CLS_LEN
 
 FEAT_W = int(HEIGHT/SCALE)
 FEAT_H = int(WIDTH/SCALE)
+
+LBD_COORD=1
+LBD_OBJ=5
+LBD_NOOBJ=1
+LBD_CLS=1
 
 # --------------------------------------------------
 
@@ -57,5 +78,6 @@ GRID_MAP=np.concatenate([
     ,axis=-1)
 
 idx2name = IDX2CHARS
+
 id2idx = dict(enumerate(range(CLS_LEN)))
 idx2id = dict(enumerate(range(CLS_LEN)))
