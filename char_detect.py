@@ -9,12 +9,11 @@
 # 
 # So the most direct solution: Create a scene text detection data generator
 
-# In[1]:
+# In[32]:
+
 
 import matplotlib
 matplotlib.use('Agg')
-from matplotlib import pyplot as plt
-
 from torch.utils.data import dataset
 from torch.utils.data import DataLoader
 from constant import *
@@ -27,75 +26,144 @@ from p3self.matchbox import *
 from utils import *
 
 
+# In[33]:
+
+
+len(IDX2CHARS)
+
+
 # ### Texted image generator
 
-# In[2]:
-
+# In[34]:
 
 
 from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw 
 import os
-from char_data import Make_Char,rd,rd_font
-
-# rg_n,rg_l,rg_u,rg_c,
-
-# fonts
+from char_data import Make_Char,rd,rd_font,Make_Char_cn
 
 
-# In[3]:
+# In[35]:
 
 
-# %rm /data/forge/char_detect/*
-# mc = Make_Char(img_dir = "/data/train2017/",forge_dir="/data/forge/char_detect/")
-# dl = DataLoader(mc,batch_size=4,shuffle=True)
-# mc_gen=iter(dl)
+print("="*60)
+print("EXPERIMENT\t",EXPERIMENT)
+print("TRAIN_CLS\t",TRAIN_CLS)
+print("REBUILD_DATA\t",REBUILD_DATA)
+print("annotation for classification:\t",ANN_CLS)
+print("annotation for all:\t",ANN)
+print("="*60)
 
-# from tqdm import trange
-# t=trange(len(dl))
 
-# for i in t:_ = next(mc_gen)
+# ### Generate Image with Characters
 
-# pd.concat(mc.df_dicts,axis=0).to_csv("/data/forge/char_lbl.csv")
+# In[36]:
+
+
+from tqdm import trange
+import os
+
+if REBUILD_DATA:
+    
+    os.system("rm %s*"%(IMG))
+    mc = Make_Char(img_dir = IMG_EPT,forge_dir=IMG)
+    dl = DataLoader(mc,batch_size=4,shuffle=True)
+    mc_gen=iter(dl)
+
+    if EXPERIMENT:
+        t=trange(3)
+    else:
+        t=trange(len(dl))
+
+    for i in t:_ = next(mc_gen)
+    mc.df_dicts = list(d for d in mc.df_dicts if type(d)!= dict)
+    pd.concat(mc.df_dicts,axis=0).to_csv(ANN)
+    
+    if TRAIN_CLS:
+        os.system("rm %s*"%(IMG_CLS))
+        mc2 = Make_Char_cn(img_dir = IMG_EPT,forge_dir=IMG_CLS)
+        dl2 = DataLoader(mc2,batch_size=4,shuffle=True)
+        mc_gen2=iter(dl2)
+
+        if EXPERIMENT:
+            t=trange(3)
+        else:
+            t=trange(len(dl2))
+
+        for i in t:_ = next(mc_gen2)
+        mc2.df_dicts = list(d for d in mc2.df_dicts if type(d)!= dict)
+        pd.concat(mc2.df_dicts,axis=0).to_csv(ANN_CLS)
 
 
 # ### Prepare Data
 
-# In[4]:
+# In[37]:
 
 
-ann_df = pd.read_csv("/data/forge/char_lbl.csv")
-
-ann_df.sample(5)
-
-
-# In[5]:
+ann_df = pd.read_csv(ANN)
+if TRAIN_CLS:ann_df2 = pd.read_csv(ANN_CLS)
+# ann_df.sample(5)
 
 
-urls = glob(IMG+"/*")
+# In[38]:
+
+
+urls = glob(IMG_CLS+"/*")
 
 rdimg = np.random.choice(urls)
 def get_id(url):
     return url.split("/")[-1]
 
 def get_bb(rdimg):
-    match = ann_df[ann_df["image_id"]==get_id(rdimg)][["bbox","category_id"]]
+    match = ann_df2[ann_df2["image_id"]==get_id(rdimg)][["bbox","category_id"]]
     return list(match["bbox"]),list(match["category_id"])
 
 get_bb(rdimg)
 
-plt.ioff()
 
+# In[39]:
+
+
+from matplotlib import pyplot as plt
 import matplotlib.patches as patches
 import matplotlib.text as text
+# %matplotlib inline
+import matplotlib
+
+# msyh = matplotlib.font_manager.FontProperties(fname='/data/fonts_cn/msyh.ttf')
+
+# fig,ax = plt.subplots(1)
+# ax.imshow(Image.open(rdimg).resize((HEIGHT,WIDTH)))
+# bbs,cids = get_bb(rdimg)
+# # font_label = ImageFont.FreeTypeFont("/data/fonts_cn/msyh.ttf", 5)
+# for i in range(len(bbs)):
+#     bb=eval(bbs[i])
+#     # format of the bb: x, y, width, height
+#     rect = patches.Rectangle((bb[0],bb[1]),bb[2],bb[3],linewidth=1,edgecolor='r',facecolor='none')
+
+#     ax.add_patch(rect)
+#     # format of bb 
+#     ax.text(bb[0],bb[1],idx2name[cids[i]],dict({"color":"#ff0000"}),fontproperties=msyh)
+#     # print(idx2name[cids[i]])
+
+
+# In[40]:
+
+
+plt.ioff()
+
+
+# In[41]:
+
+
 import torch
 from torch import nn
 from torch.autograd import Variable
 from torch.nn import functional as F
 
 
-# In[8]:
+# In[42]:
 
 
 def df_data(ann_df,shuffle=True):
@@ -116,18 +184,6 @@ def df_data(ann_df,shuffle=True):
     data_df["width"] = data_df["category_id"].apply(lambda x:WIDTH)
     data_df["height"] = data_df["category_id"].apply(lambda x:HEIGHT)
     return data_df
-
-data_df = df_data(ann_df)
-data_df.head()
-
-
-# Adjust the bounding box
-
-# In[9]:
-
-
-bbox_array = np.array(data_df.bbox.tolist()).astype(np.float64)
-wh_array = data_df[["width","height"]].as_matrix().astype(np.float64)
 
 def re_calibrate(bbox_array,wh_array):
     """return the resized bbox array"""
@@ -154,6 +210,19 @@ def find_best_anchors(true_bbwh):
     best_anchor_idx = np.array(iou_score).T.argmax(axis=-1)
     return best_anchor_idx
 
+
+
+# Adjust the bounding box
+
+# In[43]:
+
+
+print("Load full data")
+data_df = df_data(ann_df)
+
+bbox_array = np.array(data_df.bbox.tolist()).astype(np.float64)
+wh_array = data_df[["width","height"]].as_matrix().astype(np.float64)
+
 bb_resized,true_bb,grid_bbxy = re_calibrate(bbox_array,wh_array)
 true_bbxy,true_bbwh = true_bb[...,:2],true_bb[...,2:]
 best_anchor_idx = find_best_anchors(true_bbwh)
@@ -163,12 +232,45 @@ min_lbl = SCALE * 0.001
 data_df["true_bb_x"],data_df["true_bb_y"],data_df["true_bb_w"],data_df["true_bb_h"]=true_bb[:,0],true_bb[:,1],true_bb[:,2],true_bb[:,3]
 data_df["true_grid_x"],data_df["true_grid_y"]=grid_bbxy[:,0],grid_bbxy[:,1]
 
-# data_df["true_bb_x"]=data_df["true_bb_x"]-data_df["true_grid_x"]
-# data_df["true_bb_y"]=data_df["true_bb_y"]-data_df["true_grid_y"]
-
 data_df["best_anchor"]=best_anchor_idx
 data_df_ = data_df[data_df["true_bb_w"]>min_lbl]
 data_df_ = data_df_[data_df_["true_bb_h"]>min_lbl]
+data_df_["only_cls"]=1 # train the full loss function
+print("Full data loaded")
+
+
+# ## cls data
+
+# In[44]:
+
+
+
+if TRAIN_CLS:
+    print("Loading classification data")
+    data_df2 = df_data(ann_df2)
+    data_df2.head()
+
+    bbox_array2 = np.array(data_df2.bbox.tolist()).astype(np.float64)
+    wh_array2 = data_df2[["width","height"]].as_matrix().astype(np.float64)
+
+    bb_resized2,true_bb2,grid_bbxy2 = re_calibrate(bbox_array2,wh_array2)
+    true_bbxy2,true_bbwh2 = true_bb2[...,:2],true_bb2[...,2:]
+    best_anchor_idx2 = find_best_anchors(true_bbwh2)
+
+    min_lbl2 = SCALE * 0.001
+
+    data_df2["true_bb_x"],data_df2["true_bb_y"],data_df2["true_bb_w"],data_df2["true_bb_h"]=true_bb2[:,0],true_bb2[:,1],true_bb2[:,2],true_bb2[:,3]
+    data_df2["true_grid_x"],data_df2["true_grid_y"]=grid_bbxy2[:,0],grid_bbxy2[:,1]
+
+    data_df2["best_anchor"]=best_anchor_idx2
+    data_df_cls = data_df2[data_df2["true_bb_w"]>min_lbl2]
+    data_df_cls = data_df_cls[data_df_cls["true_bb_h"]>min_lbl2]
+
+    data_df_cls["only_cls"]=0 # only train the classification part
+
+    # Mix and shuffle the "train all loss" and "train classification only"
+    data_df_ = pd.concat([data_df_,data_df_cls],axis=0).sample(frac=1.).reset_index()
+    print("Classification data loaded")
 
 
 # #### Reverse adjust funtion to get train labels
@@ -193,15 +295,15 @@ data_df_ = data_df_[data_df_["true_bb_h"]>min_lbl]
 # 
 # $\large t_{h}=ln(\frac{b_{h}}{p_{h}})$
 
-# In[10]:
+# In[45]:
 
 
 from conv_model import dn121_conv
-
+print("loading conv layers from %s"%(DN121))
 dn121=dn121_conv(DN121)
 
 
-# In[11]:
+# In[46]:
 
 
 class dn_yolo(nn.Module):
@@ -237,7 +339,7 @@ class dn_yolo(nn.Module):
 
 # ## Data Generator
 
-# In[12]:
+# In[47]:
 
 
 from torch.utils.data import DataLoader,dataset
@@ -245,7 +347,7 @@ from torchvision import transforms
 from PIL import Image
 
 
-# In[13]:
+# In[48]:
 
 
 transform = transforms.Compose([transforms.Resize((HEIGHT,WIDTH)),
@@ -260,7 +362,7 @@ back2PIL = transforms.Compose([transforms.ToPILImage(mode="RGB")])
 
 # ## Training
 
-# In[14]:
+# In[49]:
 
 
 from torch.utils.data import DataLoader
@@ -269,80 +371,99 @@ from datetime import datetime
 import os
 
 
-# In[15]:
+# In[50]:
 
 
 from data import Data_Multi
 
 
-# In[16]:
+# In[51]:
 
 
 train_set = Data_Multi(data_df=data_df_,
+                       train_cls=TRAIN_CLS,
                        transform=transform,
                        trans_origin=trans_origin)
 
 
-# In[17]:
+# In[52]:
 
 
 trainer=Trainer(train_set,batch_size=16,print_on=5)
 model = dn_yolo(dn121,1024)
-from loss_ import yolo3_loss_on_t as yolo3_loss
+if TRAIN_CLS:
+    from loss_ import yolo3_loss_both as yolo3_loss
+else:
+    from loss_ import yolo3_loss_on_t as yolo3_loss
 
 
-# In[18]:
+# In[53]:
 
 
 # Loss function lambdas
-loss_func = yolo3_loss(lbd_coord=1,
-                       lbd_obj=5,
-                       lbd_noobj=1,
-                       lbd_cls=1,
+loss_func = yolo3_loss(lbd_coord=LBD_COORD,lbd_obj=LBD_OBJ,
+                       lbd_noobj=LBD_NOOBJ,lbd_cls=LBD_CLS,
                        testing=False,train_all=True)
 
 
-# In[19]:
+# In[54]:
 
 
 CUDA = torch.cuda.is_available()
+print("CUDA:\t",CUDA)
 if CUDA:
+    print("loading model to cuda")
     torch.cuda.empty_cache()
     model.cuda()
     loss_func.cuda()
 
 
-# In[20]:
+# In[55]:
 
 
 from torch.optim import Adam
-optimizer = Adam(model.parameters())
+optimizer = Adam(model.parameters(),)
 
 
-# In[21]:
+# In[56]:
+
+
 model.load_state_dict(torch.load("%s.torch/models/char_0.1.pkl"%(HOME)))
+
+
+# In[57]:
+
 
 def action(*args,**kwargs):
     """
     y_s: label for scoring, because the y's bb has been transformed into t
     """
-    x,original, t_box, conf_, cls_, mask, cls_mask, b_box = args[0]
+    if TRAIN_CLS:
+        x,original, t_box, conf_, cls_, mask, b_box,only_cls = args[0]
+    else:
+        x,original, t_box, conf_, cls_, mask, b_box = args[0]
     iteration=kwargs["ite"]
     # x,t_box, conf_, cls_, mask, cls_mask, b_box = Variable(x), Variable(t_box), Variable(conf_), Variable(cls_), Variable(mask), Variable(cls_mask), Variable(b_box)
     if CUDA:
-        x,t_box, conf_, cls_, mask, cls_mask, b_box = x.cuda(),t_box.cuda(), conf_.cuda(), cls_.cuda(), mask.cuda(), cls_mask.cuda(), b_box.cuda()
+        x,t_box, conf_, cls_, mask, b_box = x.cuda(),t_box.cuda(), conf_.cuda(), cls_.cuda(), mask.cuda(),  b_box.cuda()
+        if TRAIN_CLS:
+            only_cls = only_cls.cuda()
+    
     optimizer.zero_grad()
     
     y_ = model(x)
-    model.x=x
-    model.y_=y_
+    model.x,model.y_=x,y_
     
-    loss,loss_x,loss_y,loss_w,loss_h,loss_obj,loss_noobj,loss_cls = loss_func(y_,t_box, conf_, cls_, mask, cls_mask, b_box)
+    # train class only
+    if TRAIN_CLS:
+        loss,loss_x,loss_y,loss_w,loss_h,loss_obj,loss_noobj,loss_cls = loss_func(y_,t_box, conf_, cls_, mask, b_box, only_cls)
+    else:
+        loss,loss_x,loss_y,loss_w,loss_h,loss_obj,loss_noobj,loss_cls = loss_func(y_,t_box, conf_, cls_, mask, b_box)
     loss.backward()
 
     optimizer.step()
 
-    if iteration%10==0:
+    if iteration%30==0:
         y_pred = loss_func.t2b(y_)[0:1,...]
         if CUDA:
             y_pred = y_pred.cpu()
@@ -361,8 +482,8 @@ def action(*args,**kwargs):
 trainer.action=action
 
 
-# In[ ]:
+# In[58]:
 
 
-trainer.train(2)
+trainer.train(10)
 
